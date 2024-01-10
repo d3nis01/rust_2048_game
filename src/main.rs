@@ -13,11 +13,12 @@ fn main() -> crossterm::Result<()> {
     enable_raw_mode()?;
     let mut game_board = vec![vec![0; 4]; 4];
     let mut colors: HashMap<u32, Color> = HashMap::new();
+    let mut current_score = 0;
 
     initialize_colors(&mut colors);
     spawn_random_tile(&mut game_board);
     spawn_random_tile(&mut game_board);
-    render_board(&game_board, &colors)?;
+    render_board(&game_board, &colors, current_score)?;
 
     loop {
         if let Event::Key(key_event) = read()? {
@@ -34,7 +35,8 @@ fn main() -> crossterm::Result<()> {
 
                     if moved {
                         spawn_random_tile(&mut game_board);
-                        render_board(&game_board, &colors)?;
+                        current_score = calculate_score(&game_board);
+                        render_board(&game_board, &colors, current_score)?;
                     }
                 }
             }
@@ -45,7 +47,11 @@ fn main() -> crossterm::Result<()> {
     Ok(())
 }
 
-fn render_board(game_board: &Vec<Vec<u32>>, colors: &HashMap<u32, Color>) -> crossterm::Result<()> {
+fn render_board(
+    game_board: &Vec<Vec<u32>>,
+    colors: &HashMap<u32, Color>,
+    current_score: u32,
+) -> crossterm::Result<()> {
     let mut stdout: std::io::Stdout = stdout();
     stdout.execute(Clear(ClearType::All))?;
     stdout.execute(cursor::MoveTo(0, 0))?;
@@ -57,8 +63,15 @@ fn render_board(game_board: &Vec<Vec<u32>>, colors: &HashMap<u32, Color>) -> cro
         }
         writeln!(stdout)?;
     }
+    writeln!(stdout, " > Current score : {}", current_score)?;
+    writeln!(stdout)?;
+    writeln!(stdout, " > Press E to exit")?;
     stdout.flush()?;
     Ok(())
+}
+
+fn calculate_score(game_board: &[Vec<u32>]) -> u32 {
+    game_board.iter().flatten().sum()
 }
 
 fn initialize_colors(colors: &mut HashMap<u32, Color>) {
