@@ -2,7 +2,7 @@ use colored::*;
 use crossterm::{
     cursor,
     event::{read, Event, KeyCode},
-    terminal::{enable_raw_mode, Clear, ClearType},
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand,
 };
 use rand::{seq::IteratorRandom, thread_rng, Rng};
@@ -21,20 +21,28 @@ fn main() -> crossterm::Result<()> {
 
     loop {
         if let Event::Key(key_event) = read()? {
-            let moved = match key_event.code {
-                KeyCode::Up => move_up(&mut game_board),
-                KeyCode::Down => move_down(&mut game_board),
-                KeyCode::Left => move_left(&mut game_board),
-                KeyCode::Right => move_right(&mut game_board),
-                _ => false,
-            };
+            match key_event.code {
+                KeyCode::Char('e') | KeyCode::Char('E') => break,
+                _ => {
+                    let moved = match key_event.code {
+                        KeyCode::Up => move_up(&mut game_board),
+                        KeyCode::Down => move_down(&mut game_board),
+                        KeyCode::Left => move_left(&mut game_board),
+                        KeyCode::Right => move_right(&mut game_board),
+                        _ => false,
+                    };
 
-            if moved {
-                spawn_random_tile(&mut game_board);
-                render_board(&game_board, &colors)?;
+                    if moved {
+                        spawn_random_tile(&mut game_board);
+                        render_board(&game_board, &colors)?;
+                    }
+                }
             }
         }
     }
+
+    disable_raw_mode()?;
+    Ok(())
 }
 
 fn render_board(game_board: &Vec<Vec<u32>>, colors: &HashMap<u32, Color>) -> crossterm::Result<()> {
