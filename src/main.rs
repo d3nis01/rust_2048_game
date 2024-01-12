@@ -43,7 +43,9 @@ fn main() -> crossterm::Result<()> {
 
                         if current_score > high_score {
                             high_score = current_score;
-                            let _ = write_high_score(high_score);
+                            if let Err(e) = write_high_score(high_score) {
+                                eprintln!("Failed to write high score: {}", e);
+                            }
                         }
 
                         if !can_make_move(&game_board) {
@@ -137,6 +139,8 @@ fn initialize_colors(colors: &mut HashMap<u32, Color>) {
     colors.insert(128, Color::BrightRed);
     colors.insert(256, Color::BrightBlue);
     colors.insert(512, Color::BrightGreen);
+    colors.insert(1024, Color::Green);
+    colors.insert(2048, Color::BrightCyan);
 }
 
 fn spawn_random_tile(game_board: &mut [Vec<u32>]) {
