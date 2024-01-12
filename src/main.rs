@@ -29,7 +29,7 @@ fn main() -> crossterm::Result<()> {
             match key_event.code {
                 KeyCode::Char('e') | KeyCode::Char('E') => break,
                 _ => {
-                    let moved = match key_event.code {
+                    let moved: bool = match key_event.code {
                         KeyCode::Up => move_up(&mut game_board),
                         KeyCode::Down => move_down(&mut game_board),
                         KeyCode::Left => move_left(&mut game_board),
@@ -75,15 +75,14 @@ fn render_board(
     for row in game_board {
         for &val in row {
             let color = colors.get(&val).unwrap_or(&Color::White);
-            write!(stdout, "{} ", format!("{:4}", val).color(*color))?;
+            print!("{} ", format!("{:4}", val).color(*color));
         }
-        writeln!(stdout)?;
+        println!();
     }
-    writeln!(stdout, " > Current score : {}", current_score)?;
-    writeln!(stdout, " > High score    : {}", high_score)?;
-    writeln!(stdout)?;
-    writeln!(stdout, " > Press E to exit")?;
-    stdout.flush()?;
+    println!(" > Current score : {}", current_score);
+    println!(" > High score    : {}", high_score);
+    println!();
+    println!(" > Press E to exit");
     Ok(())
 }
 
@@ -157,9 +156,10 @@ fn spawn_random_tile(game_board: &mut [Vec<u32>]) {
 }
 
 fn move_left(game_board: &mut [Vec<u32>]) -> bool {
+    let initial_board = game_board.to_vec();
     let mut moved = false;
 
-    for row in game_board {
+    for row in game_board.iter_mut() {
         for i in 1..row.len() {
             let mut k = i;
             while k > 0 && row[k - 1] == 0 {
@@ -184,13 +184,18 @@ fn move_left(game_board: &mut [Vec<u32>]) -> bool {
         }
     }
 
+    if initial_board == *game_board {
+        moved = false;
+    }
+
     moved
 }
 
 fn move_right(game_board: &mut [Vec<u32>]) -> bool {
     let mut moved = false;
+    let initial_board = game_board.to_vec();
 
-    for row in game_board {
+    for row in game_board.iter_mut() {
         for i in (0..row.len() - 1).rev() {
             let mut k = i;
             while k < row.len() - 1 && row[k + 1] == 0 {
@@ -216,11 +221,16 @@ fn move_right(game_board: &mut [Vec<u32>]) -> bool {
         }
     }
 
+    if initial_board == *game_board {
+        moved = false;
+    }
+
     moved
 }
 
 fn move_up(game_board: &mut [Vec<u32>]) -> bool {
     let mut moved = false;
+    let initial_board = game_board.to_vec();
 
     for col in 0..game_board[0].len() {
         for row in 1..game_board.len() {
@@ -249,11 +259,16 @@ fn move_up(game_board: &mut [Vec<u32>]) -> bool {
         }
     }
 
+    if initial_board == *game_board {
+        moved = false;
+    }
+
     moved
 }
 
 fn move_down(game_board: &mut [Vec<u32>]) -> bool {
     let mut moved = false;
+    let initial_board = game_board.to_vec();
 
     for col in 0..game_board[0].len() {
         for row in (0..game_board.len() - 1).rev() {
@@ -280,6 +295,10 @@ fn move_down(game_board: &mut [Vec<u32>]) -> bool {
                 k += 1;
             }
         }
+    }
+
+    if initial_board == *game_board {
+        moved = false;
     }
 
     moved
