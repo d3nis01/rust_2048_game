@@ -6,55 +6,100 @@ use crossterm::{
     ExecutableCommand,
 };
 use rand::{seq::IteratorRandom, thread_rng, Rng};
-use std::{collections::HashMap, fs, io};
+use serde::{Deserialize, Serialize};
 use std::{
-    fs::File,
-    io::{stdout, Write},
+    collections::HashMap,
+    fs::{self, File},
+    io::{self, stdout, Write},
 };
+
+#[derive(Serialize, Deserialize)]
+struct GameState {
+    game_board: Vec<Vec<u32>>,
+    current_score: u32,
+    high_score: u32,
+}
+
+fn save_game_state(state: &GameState) -> Result<(), Box<dyn std::error::Error>> {
+    let serialized = serde_json::to_string(state)?;
+    fs::write("game_state.json", serialized)?;
+    Ok(())
+}
+
+fn load_game_state() -> Option<GameState> {
+    let data = fs::read_to_string("game_state.json").ok()?;
+    serde_json::from_str(&data).ok()
+}
 
 fn main() -> crossterm::Result<()> {
     enable_raw_mode()?;
-    let mut game_board = vec![vec![0; 4]; 4];
     let mut colors: HashMap<u32, Color> = HashMap::new();
-    let mut current_score = 0;
+    let mut state = load_game_state().unwrap_or_else(|| GameState {
+        game_board: vec![vec![0; 4]; 4],
+        current_score: 0,
+        high_score: read_high_score(),
+    });
+    state.current_score = calculate_score(&state.game_board);
 
     let mut high_score = read_high_score();
     initialize_colors(&mut colors);
-    spawn_random_tile(&mut game_board);
-    spawn_random_tile(&mut game_board);
-    render_board(&game_board, &colors, current_score, high_score)?;
+    if state.current_score == 0 {
+        spawn_random_tile(&mut state.game_board);
+        spawn_random_tile(&mut state.game_board);
+    }
+    render_board(&state.game_board, &colors, state.current_score, high_score)?;
 
     loop {
         if let Event::Key(key_event) = read()? {
             match key_event.code {
-                KeyCode::Char('e') | KeyCode::Char('E') => break,
+                KeyCode::Char('e') | KeyCode::Char('E') => {
+                    if let Err(e) = save_game_state(&state) {
+                        eprintln!(" > Failed to save game state: {}", e);
+                    }
+                    break;
+                }
                 _ => {
                     let moved: bool = match key_event.code {
-                        KeyCode::Up => move_up(&mut game_board),
-                        KeyCode::Down => move_down(&mut game_board),
-                        KeyCode::Left => move_left(&mut game_board),
-                        KeyCode::Right => move_right(&mut game_board),
+                        KeyCode::Up => move_up(&mut state.game_board),
+                        KeyCode::Down => move_down(&mut state.game_board),
+                        KeyCode::Left => move_left(&mut state.game_board),
+                        KeyCode::Right => move_right(&mut state.game_board),
                         _ => false,
                     };
 
                     if moved {
-                        spawn_random_tile(&mut game_board);
-                        current_score = calculate_score(&game_board);
+                        spawn_random_tile(&mut state.game_board);
+                        state.current_score = calculate_score(&state.game_board);
 
-                        if current_score > high_score {
-                            high_score = current_score;
+                        if state.current_score > high_score {
+                            high_score = state.current_score;
                             if let Err(e) = write_high_score(high_score) {
-                                eprintln!("Failed to write high score: {}", e);
+                                eprintln!(" > Failed to write high score: {}", e);
                             }
                         }
 
-                        if !can_make_move(&game_board) {
-                            render_board(&game_board, &colors, current_score, high_score)?;
+                        if !can_make_move(&state.game_board) {
+                            render_board(
+                                &state.game_board,
+                                &colors,
+                                state.current_score,
+                                high_score,
+                            )?;
+                            let start_state: GameState = GameState {
+                                game_board: vec![vec![0; 4]; 4],
+                                current_score: 0,
+                                high_score: read_high_score(),
+                            };
+
+                            if let Err(e) = save_game_state(&start_state) {
+                                eprintln!(" > Failed to save game state: {}", e);
+                            }
+
                             println!(" >> Game Over! <<");
                             break;
                         }
 
-                        render_board(&game_board, &colors, current_score, high_score)?;
+                        render_board(&state.game_board, &colors, state.current_score, high_score)?;
                     }
                 }
             }

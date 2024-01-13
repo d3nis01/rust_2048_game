@@ -7,3 +7,5 @@ edition = "2021"
 crossterm = "0.22"
 colored = "2.0"
 rand = "0.8"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
